@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>pearls moment</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background-color: #5E5DF0;
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 100vh;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    #title {
+      position: absolute;
+      top: 20px;
+      font-size: 2.5em;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.9);
+      text-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    #search-container {
+      width: 80%;
+      max-width: 600px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 15px;
+      animation: fadeIn 1s ease-in-out;
+    }
+
+    #search-bar {
+      width: 100%;
+      padding: 15px 20px;
+      font-size: 1.2em;
+      border-radius: 30px;
+      border: none;
+      outline: none;
+      background: #f5f5f5;
+      color: #333;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    #search-bar:focus {
+      transform: scale(1.05);
+      box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    #autocomplete-list {
+      width: 100%;
+      background: #ffffff;
+      color: #333;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    #autocomplete-list li {
+      padding: 12px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    #autocomplete-list li:hover {
+      background-color: #2563eb;
+      color: white;
+    }
+
+    .chart-container {
+      display: none;
+      margin-top: 20px;
+      width: 100%;
+      max-width: 800px;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 15px;
+      backdrop-filter: blur(15px);
+      box-shadow: 0px 6px 20px rgba(0, 0, 0, 0.3);
+      color: white;
+      text-align: left;
+      position: relative;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+      max-height: 80vh;
+      overflow-y: auto;
+      height: auto;
+      min-height: fit-content;
+      padding-bottom: 20px;
+    }
+
+    .chart-container.active {
+      height: auto;
+      min-height: fit-content;
+      display: block;
+      opacity: 1;
+      transform: translateY(0);
+      animation: popIn 0.5s cubic-bezier(0.25, 0.1, 0.25, 1);
+    }
+
+    @keyframes popIn {
+      0% {
+        opacity: 0;
+        transform: scale(0.8) translateY(20px);
+      }
+      70% {
+        opacity: 0.7;
+        transform: scale(1.05) translateY(-5px);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    .chart-container h2 {
+      font-size: 1.8em;
+      margin: 5px 0;
+    }
+
+    .chart-container p {
+      margin: 5px 0;
+    }
+
+    .chart-container p strong {
+      font-weight: 600;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .toggle-button {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      background: #4caf50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      padding: 5px 10px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      display: none;
+    }
+
+    .toggle-button:hover {
+      background: #45a049;
+    }
+
+    .main-info, .dropdown {
+      transition: all 0.5s ease-in-out, opacity 0.5s ease-in-out;
+    }
+
+    .dropdown {
+      margin-top: 15px;
+      padding: 10px;
+      background: #ffffff;
+      color: #333;
+      border-radius: 5px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+      display: none;
+      opacity: 0;
+      max-height: 70vh;
+      overflow-y: auto;
+    }
+
+    .dropdown.active {
+      display: block;
+      opacity: 1;
+      height: auto;
+      max-height: none;
+    }
+
+    .dropdown select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 1em;
+      margin-bottom: 10px;
+    }
+
+    .main-info {
+      display: block;
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .main-info.hidden {
+      opacity: 0;
+      transform: translateY(20px);
+      max-height: 0;
+      overflow: hidden;
+    }
+
+    #dosing-details {
+      max-height: 70vh;
+      overflow-y: auto;
+      padding-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div id="title">antibiotic/pathogen database (rip chart)</div>
+
+  <div id="search-container">
+    <input id="search-bar" type="text" placeholder="Search for a bug or drug...">
+    <ul id="autocomplete-list"></ul>
+  </div>
+
+  <div class="chart-container" id="info-chart">
+    <h2 id="item-name"></h2>
+    <div class="main-info" id="main-info">
+      <p id="item-class"></p>
+      <p id="item-details"></p>
+    </div>
+    <button class="toggle-button" id="toggle-dosing">Dosing</button>
+    <div class="dropdown" id="dosing-info">
+      <label for="indication">Select Indication:</label>
+      <select id="indication">
+        <option value="">Select an indication</option>
+      </select>
+      
+      <div id="dosing-details">
+        <p>Select an indication to view dosing information</p>
+
+      <div class="footer">
+          <p>database uses information sourced from UpToDate and Micromedex. All rights to the content are owned by their respective providers.</p>
+      </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const data = [
+      {
+        type: 'Bug',
+        name: "Streptococcus pneumoniae/pyogenes/viridans",
+        class: "Gram Positive Cocci",
+        infections: "CNS/oral/respiratory/heart/skin",
+        sensitivity: "--",
+        resistance: "No",
+      },
+      {
+        type: 'Bug',
+        name: "Enterococcus faecalis",
+        class: "Gram Positive Cocci",
+        infections: "intraabdominal/urinary tract",
+        sensitivity: "--",
+        resistance: "No",
+      },
+      {
+        type: 'Bug',
+        name: "Staphylococcus epidermidis",
+        class: "Gram-Positive Cocci",
+        infections: "skin/prosthetics",
+        sensitivity: "--",
+        resistance: "No",
+      },
+      {
+        type: 'Bug',
+        name: "Staphylococcus aureus",
+        class: "Gram-Positive Cocci",
+        infections: "oral/respiratory tract/heart/skin/bones + joint",
+        sensitivity: "--",
+        resistance: "No",
+      },
+      {
+        type: 'Bug',
+        name: "Escherichia coli",
+        class: "Gram-Negative Rod",
+        infections: "urinary tract/gastrointestinal tract/sepsis/others",
+        sensitivity: "--",
+        resistance: "ESBL/AmpC/CRE",
+      },
+      {
+        type: 'Bug',
+        name: "Klebsiella pneumoniae",
+        class: "Gram-Negative Rod",
+        infections: "pneumonia/urinary tract/bloodstream/others",
+        sensitivity: "--",
+        resistance: "ESBL/AmpC/CRE",
+      },
+      {
+        type: 'Bug',
+        name: "Proteus mirabilis",
+        class: "Gram-Negative Rod",
+        infections: "urinary tract/wound infections/bloodstream/others",
+        sensitivity: "--",
+        resistance: "ESBL (less common)/AmpC (rare)",
+      },
+      {
+        type: 'Bug',
+        name: "Enterobacter spp.",
+        class: "Gram-Negative Rod",
+        infections: "respiratory tract/gastrointestinal tract/bloodstream/others",
+        sensitivity: "--",
+        resistance: "ESBL/AmpC/CRE",
+      },
+      {
+        type: 'Bug',
+        name: "Citrobacter spp.",
+        class: "Gram-Negative Rod",
+        infections: "urinary tract/gastrointestinal tract/bloodstream/others",
+        sensitivity: "--",
+        resistance: "ESBL/AmpC/CRE",
+      },
+      {
+      type: 'Bug',
+        name: "Haemophilus influenzae",
+        class: "Gram-Negative Rod",
+        infections: "urinary tract/gastrointestinal tract/bloodstream/others",
+        sensitivity: "--",
+        resistance: "ESBL/AmpC",
+      },
+      {
+      type: 'Bug',
+        name: "Pseudomonas aeruginosa",
+        class: "Gram-Negative Rod",
+        infections: "respiratory tract/bloodstream/urinary tract/bone + joint",
+        sensitivity: "--",
+        resistance: "MDR",
+      },
+      {
+      type: 'Bug',
+        name: "Neisseria meningitidis",
+        class: "Gram-Negative Cocci",
+        infections: "meningitis/sepsis",
+        sensitivity: "--",
+        resistance: "No",
+      },
+      {
+      type: 'Bug',
+        name: "Neisseria gonorrhoeae",
+        class: "Gram-Negative Cocci",
+        infections: "pelvic inflammatory disease/gonorrhea/rectal",
+        sensitivity: "--",
+        resistance: "No",
+      },
+      {
+      type: 'Bug',
+        name: "Peptostreptococcus spp.",
+        class: "Anaerobe",
+        infections: "oral/respiratory tract/intraabdominal/bone + joint/wound infections",
+        sensitivity: "--",
+        resistance: "No",
+      },
+      {
+      type: 'Bug',
+        name: "Bacteroides spp.",
+        class: "Anaerobe",
+        infections: "intraabdominal/pelvic inflammatory disease/wound infections",
+        sensitivity: "--",
+        resistance: "No",
+      },
+      {
+      type: 'Bug',
+        name: "Clostridioides difficile",
+        class: "Anaerobe",
+        infections: "intraabdominal",
+        sensitivity: "--",
+        resistance: "No",
+      },
+      {
+        type: 'Drug',
+        name: "Vancomycin",
+        brandName: "Vancocin®",
+        class: "Glycopeptide",
+        details: {
+          indications: "Treats Gram-positive infections",
+          moa: "Inhibits bacterial cell wall synthesis",
+          spectrum: "Effective against MRSA, Gram-positive bacteria",
+          sideEffects: "Nephrotoxicity, Red Man Syndrome",
+          contraindications: "Allergy to vancomycin"
+        },
+        indications: [
+          "Bacteremia associated with intravascular line",
+          "Bacterial meningitis",
+          "Cirrhosis of liver - Spontaneous bacterial peritonitis",
+          "Clostridioides difficile infection, Primary prophylaxis in allogeneic hematopoietic cell transplant recipients",
+          "Clostridioides difficile infection, Primary prophylaxis in patients at high risk for developing healthcare facility-onset C difficile infection",
+          "Clostridium difficile diarrhea",
+          "Diabetic foot infection",
+          "Febrile neutropenia, Empiric therapy",
+          "Hospital acquired pneumonia, Empiric therapy",
+          "Ileal pouchitis - Ulcerative colitis",
+          "Ileal pouchitis - Ulcerative colitis, chronic antibiotic-dependent pouchitis",
+          "Ileal pouchitis - Ulcerative colitis, chronic antibiotic-refractory pouchitis",
+          "Infection of skin and/or subcutaneous tissue",
+          "Infective endocarditis",
+          "Infective endocarditis, During electronic cardiac device implantation; Prophylaxis",
+          "Lower respiratory tract infection",
+          "Methicillin resistant Staphylococcus aureus infection",
+          "Osteomyeltiis",
+          "Osteomyelitis, Native vertebral",
+          "Peritoneal dialysis-associated peritonitis",
+          "Prosthetic joint infection",
+          "Staphylococcal enterocolitis",
+          "Ventilator associated pneumonia, Empiric therapy"
+        ],
+        dosing: {
+          "Bacteremia associated with intravascular line": {
+            adult: "Methicillin-resistant Staphylococcus aureus, ampicillin-resistant Enterococcus faecalis/faecium: 15mg/kg IV every 12 hours",
+            renal_adjustment: "Reduce dose in renal impairment",
+          },
+          "Bacterial meningitis": {
+            adult: "30 to 45 mg/kg/day IV divided every 8 to 12 hours; serum trough concentration 15 to 20 mcg/mL (10 to 14 mcmol/L); not for use as monotherapy" +
+            "<br><br>MRSA-associated infection: 15 to 20 mg/kg/dose IV every 8 to 12 hours for 2 weeks (meningitis) or 4 to 6 weeks (brain abscess, subdural empyema, spinal epidural abscess, and septic thrombosis of cavernous or dural venous sinus); MAX 2 g/dose; target trough concentration 15 to 20 mcg/mL (10 to 14 mcmol/L); seriously ill patient, consider loading dose of 25 to 30 mg/kg (actual body weight)",
+            renal_adjustment: "Adjust dose based on creatinine clearance",
+          },
+          "Cirrhosis of liver - Spontaneous bacterial peritonitis": {
+            adult: "2 g/day IV divided every 6 to 12 hours is the FDA dosage for MRSA infection; piperacillin/tazobactam in combination with vancomycin is suggested as empiric therapy for spontaneous bacterial peritonitis (SBP) nosocomial infections in patients with prior infection or a positive surveillance swab for MRSA",
+            renal_adjustment: "TBD",
+          },
+          "Clostridioides difficile infection, Primary prophylaxis in allogeneic hematopoietic cell transplant recipients": {
+            adult: "125 mg orally twice daily starting on the day of inpatient admission and continued until discharge (off-label dosage)",
+            renal_adjustment: "TBD",
+          },
+          "Clostridioides difficile infection, Primary prophylaxis in patients at high risk for developing healthcare facility-onset C difficile infection": {
+            adult: "125 mg orally once daily while receiving systemic antibiotics and continue for 5 days after the completion of systemic antibiotics; start within 72 hours of initiation of systemic antimicrobials (off-label dosage)",
+            renal_adjustment: "TBD",
+          },
+          "Clostridium difficile diarrhea": {
+            adult: "125 mg orally 4 times daily for 10 days (FDA dosage)" +
+            "<br><br>Initial episode, severe or nonsevere, 125 mg orally 4 times daily for 10 days" +
+            "<br><br>Fulminant disease, 500 mg orally/NG tube 4 times daily plus IV metronidazole 500 mg every 8 hours; if complete ileus, consider adding vancomycin retention enema (500 mg in 100 mL NS) rectally every 6 hours" +
+            "<br><br>First recurrence, vancomycin or fidaxomicin used in initial episode, use a prolonged tapered and pulsed regimen; for example, 125 mg orally 4 times daily for 10 to 14 days, twice daily for 1 week, once daily for 1 week, and then every 2 to 3 days for 2 to 8 weeks" +
+            "<br><br>First recurrence, metronidazole used in initial episode, 125 mg orally 4 times daily for 10 days" +
+            "<br><br>Second recurrence, 125 mg orally 4 times daily for 10 days, followed by rifaximin 400 mg orally 3 times daily for 20 days OR use a prolonged tapered and pulsed regimen; for example, 125 mg orally 4 times daily for 10 to 14 days, twice daily for 1 week, once daily for 1 week, and then every 2 to 3 days for 2 to 8 weeks",
+            renal_adjustment: "TBD",
+          },
+          "Diabetic foot infection": {
+            adult: "MRSA infection: 30 mg/kg/day IV in 2 divided doses; target an AUC/MIC ratio of 400 to 600 (assuming MIC of 1 mg/L) (guideline dosage); vancomycin is suggested as potential add-on or as primary empiric therapy for moderate to severe infections in patients with risk factors for MRSA; treat for 1 to 2 weeks; consider continuing treatment for up to 3 to 4 weeks if the infection is improving but is extensive and is resolving slower than expected or if the patient has severe peripheral artery disease. If evidence of infection has not resolved after 4 weeks of therapy, reevaluate and consider the need for further diagnostic studies or alternative treatments",
+            renal_adjustment: "TBD",
+          },
+          "Febrile neutropenia, Empiric therapy": {
+            adult: "High-risk patients: 15 to 20 mg/kg (actual body weight) IV every 8 to 12 hours to target an AUC/MIC ratio of 400 to 600 (assuming MIC of 1 mg/L) (guideline dosage for MRSA infection) PLUS an anti-pseudomonal beta-lactam until afebrile for at least 2 days and increasing absolute neutrophil count exceeds 500 cells/mm(3); discontinue vancomycin after 2 days if no evidence of gram-positive infection" +
+            "<br><br>High-risk patients with penicillin allergy: 15 to 20 mg/kg (actual body weight) IV every 8 to 12 hours to target an AUC/MIC ratio of 400 to 600 (assuming MIC of 1 mg/L) (guideline dosage for MRSA infection) PLUS aztreonam until afebrile for at least 2 days and increasing absolute neutrophil count exceeds 500 cells/mm(3)",
+            renal_adjustment: "TBD",
+          },
+          "Hospital acquired pneumonia, Empiric therapy": {
+            adult: "(Empiric therapy) 15 mg/kg IV every 8 to 12 hours for 7 days; for severe infections, consider a loading dose of 25 to 30 mg/kg IV",
+            renal_adjustment: "TBD",
+          },
+          "Ileal pouchitis - Ulcerative colitis": {
+            adult: "125 mg orally 4 times daily or 500 mg to 2 g orally in 3 or 4 divided doses (FDA dosage for enterocolitis or Closridiodes difficile-associated diarrhea); oral vancomycin is suggested as an alternative to metronidazole and/or ciprofloxacin for the treatment of pouchitis in patients who do not respond to the initial course of antibiotics or have allergies or intolerance to ciprofloxacin and/or metronidazole",
+            renal_adjustment: "TBD",
+          },
+          "Ileal pouchitis - Ulcerative colitis, chronic antibiotic-dependent pouchitis": {
+            adult: "125 mg orally 4 times daily or 500 mg to 2 g orally in 3 or 4 divided doses (FDA dosage for enterocolitis or Clostridiodes difficile-associated diarrhea); may use as chronic antibiotic therapy, using the lowest effective antibiotic dose with intermittent gap periods (ie, 1 week per month); may consider rotating between ciprofloxacin, metronidazole, and vancomycin every 1 to 2 weeks",
+            renal_adjustment: "TBD",
+          },
+          "Ileal pouchitis - Ulcerative colitis, chronic antibiotic-refractory pouchitis": {
+            adult: "125 mg orally 4 times daily or 500 mg to 2 g orally in 3 or 4 divided doses (FDA dosage for enterocolitis or Clostridiodes difficile-associated diarrhea); may use in select patients (guideline dosage)",
+            renal_adjustment: "TBD",
+          },
+          "Infection of skin and/or subcutaneous tissue": {
+            adult: "2000 mg/day IV, either as 500 mg every 6 hours or 1000 mg every 12 hours; modification of dose may be necessary based on patient factors" +
+            "<br><br>MRSA infection: 30 mg/kg/day IV in 2 divided doses; target an AUC/MIC ratio of 400 to 600 (assuming MIC of 1 mg/L)",
+            renal_adjustment: "TBD",
+          },
+          "Infective endocarditis": {
+            adult: "2 g/day IV divided every 6 to 12 hours administered over at least 60 minutes" +
+            "<br><br>Native valve, MRSA: 30 mg/kg/day IV given in 2 divided doses for 6 weeks; target trough level 10 to 20 mcg/mL (7 to 14 mcmol/L). For vancomycin troughs of 15 to 20 mcg/mL (10 to 14 mcmol/L), doses of 15 to 20 mg/kg actual body weight every 8 to 12 hours may be necessary" +
+            "<br><br>Native valve, oxacillin-susceptible staphylococci in patients intolerant of beta-lactams: 30 mg/kg/day IV given in 2 divided doses for 6 weeks; target trough level 10 to 20 mcg/mL (7 to 14 mcmol/L) [23]. For vancomycin troughs of 15 to 20 mcg/mL (10 to 14 mcmol/L), doses of 15 to 20 mg/kg actual body weight every 8 to 12 hours may be necessary" +
+            "<br><br>Native valve, Streptococci, relatively resistant or susceptible to penicillin, in patients intolerant of beta-lactams: 30 mg/kg/day IV given in 2 divided doses for 4 weeks with target trough levels of 10 to 15 mcg/mL (7 to 10 mcmol/L)" +
+            "<br><br>Prosthetic valve, MRSA: 30 mg/kg/day IV given in 2 divided doses for at least 6 weeks with target trough levels of 10 to 20 mcg/mL (7 to 14 mcmol/L) PLUS rifampin 900 mg/day IV or orally given in 3 divided doses for at least 6 weeks PLUS gentamicin 3 mg/kg/day IV/IM given in 2 or 3 divided doses for the first 2 weeks of therapy. For vancomycin troughs of 15 to 20 mcg/mL (10 to 14 mcmol/L), doses of 15 to 20 mg/kg actual body weight every 8 to 12 hours may be necessary" +
+            "<br><br>Prosthetic valve, oxacillin-susceptible staphylococci in patients intolerant of beta-lactams: 30 mg/kg/day IV given in 2 divided doses for at least 6 weeks with target trough levels of 10 to 20 mcg/mL (7 to 14 mcmol/L) PLUS rifampin 900 mg/day IV or orally given in 3 divided doses for at least 6 weeks PLUS gentamicin 3 mg/kg/day IV/IM given in 2 or 3 divided doses for the first 2 weeks of therapy. For vancomycin troughs of 15 to 20 mcg/mL (10 to 14 mcmol/L), doses of 15 to 20 mg/kg actual body weight every 8 to 12 hours may be necessary" +
+            "<br><br>Prosthetic valve, Streptococci, in patients intolerant of beta-lactams: 30 mg/kg/day IV given in 2 divided doses for 6 weeks with target trough levels of 10 to 15 mcg/mL (7 to 10 mcmol/L)" +
+            "<br><br>Enterococci, penicillin-resistant or in patients intolerant of beta-lactams: 30 mg/kg/day IV given in 2 divided doses for 6 weeks with target trough levels of 10 to 20 mcg/mL (7 to 14 mcmol/mL) PLUS gentamicin 3 mg/kg/day IV given in 3 divided doses for 6 weeks. For vancomycin troughs of 15 to 20 mcg/mL (10 to 14 mcmol/L), doses of 15 to 20 mg/kg actual body weight every 8 to 12 hours may be necessary (guideline dosage)",
+            renal_adjustment: "TBD",
+          },
+          "Infective endocarditis, During electronic cardiac device implantation; Prophylaxis": {
+            adult: "Cephalosporin allergy: 1 to 2 g IV infused over 60 to 90 minutes",
+            renal_adjustment: "TBD",
+          },
+          "Lower respiratory tract infection": {
+            adult: "2 g/day IV divided every 6 to 12 hours over at least 60 minutes; rate not to exceed 10 mg/min" +
+            "<br><br>Hospital-acquired or ventilator-associated pneumonia: 15 mg/kg IV every 8 to 12 hours for 7 days; for severe infections, consider a loading dose of 25 to 30 mg/kg IV (guideline dosage) [18]",
+            renal_adjustment: "TBD",
+          },
+          "Methicillin resistant Staphylococcus aureus infection": {
+            adult: "IV: 2 g/day IV divided every 6 to 12 hours administered over at least 60 minutes" + 
+            "<br><br>IV: 15 to 20 mg/kg (actual body weight) IV every 8 to 12 hours; target an AUC/MIC ratio of 400 to 600 (assuming MIC of 1 mg/L)" +
+            "<br><br>Continuous infusion: Loading dose, 15 to 20 mg/kg IV, then 30 to 40 mg/kg IV to achieve a target steady-state concentration of 20 to 25 mg/mL; MAX 60 mg/kg" +
+            "<br><br>Critically ill: Consider a loading dose of 20 to 35 mg/kg (actual body weight); MAX 3000 mg" +
+            "<br><br>Durations of therapy: 7 to 14 days for complicated skin and soft tissue infection, 4 to 6 weeks for bacteremia, 6 weeks for endocarditis, 7 to 21 days for pneumonia, 8 weeks minimum for osteomyelitis, and 3 to 4 weeks for septic arthritis", 
+            renal_adjustment: "TBD",
+          },
+          "Osteomyelitis": {
+            adult: "MRSA, preferred therapy: 15 mg/kg IV every 8 to 12 hours with therapeutic drug monitoring (off-label dosage)" +
+          "<br><br>Methicillin-susceptible Staphylococcus aureus, alternative therapy: 1 g IV every 12 hours with therapeutic drug monitoring (off-label dosage)",
+            renal_adjustment: "TBD",
+          },
+          "Osteomyelitis, Native vertebral": {
+            adult: "Infection due to oxacillin-susceptible staphylococci in patients with type I or documented beta-lactam allergy: Alternative therapy, 15 to 20 mg/kg IV every 12 hours for 6 weeks; consider administering a loading dose" +
+            "<br><br>Infection due to penicillin-susceptible Enterococcus species in patients with beta-lactam allergy: Alternative therapy, 15 to 20 mg/kg IV every 12 hours for 6 weeks; consider administering a loading dose" +
+            "<br><br>Infection due to penicillin-resistant Enterococcus species: 15 to 20 mg/kg IV every 12 hours for 6 weeks; consider administering a loading dose" +
+            "<br><br>Infection due to beta-hemolytic streptococci in patients with beta-lactam allergy: Alternative therapy, 15 to 20 mg/kg IV every 12 hours for 6 weeks; consider administering a loading dose" +
+            "<br><br>Infection due to Propionibacterium acnes in patients with beta-lactam allergy: Alternative therapy, 15 to 20 mg/kg IV every 12 hours for 6 weeks; consider administering a loading dose", 
+            renal_adjustment: "TBD",
+          },
+          "Peritoneal dialysis-associated peritonitis": {
+            adult: "(Intermittent dialysis; 1 exchange daily for at least 6 hours: Continuous ambulatory peritoneal dialysis, 15 to 30 mg/kg via intraperitoneal route in 1 exchange every 5 to 7 days for at least 6 hours" +
+            "<br><br>Intermittent dialysis; 1 exchange daily for at least 6 hours: Automated peritoneal dialysis, 15 mg/kg via intraperitoneal route in 1 exchange every 4 days for at least 6 hours" +
+            "<br><br>Continuous dialysis; all exchanges: Loading dose, 20 to 25 mg/kg via intraperitoneal route in the first peritoneal dialysis exchange, then a maintenance dose of 25 mg/L in subsequent peritoneal dialysis exchanges",
+            renal_adjustment: "TBD",
+          },
+          "Prosthetic joint infection": {
+            adult: "Oxacillin-susceptible Staphylococcus infection: Alternative therapy, 15 mg/kg IV every 12 hours" +
+           "<br><br>Oxacillin-resistant Staphylococcus infection 15 mg/kg IV every 12 hours (guideline dosage)" +
+           "<br><br>Rifampin-susceptible Staphylococci treated with debridement and retention or 1-stage exchange: 15 mg/kg IV every 12 hours, in combination with rifampin 300 mg to 450 mg orally twice daily" +
+           "<br><br>Penicillin-susceptible Enterococci spp infection: Alternative therapy in patients with penicillin allergy, 15 mg/kg IV every 12 hours for 4 to 6 weeks; may optionally add an aminoglycoside" +
+           "<br><br>Penicillin-resistant Enterococcus spp infection: 15 mg/kg IV every 12 hours for 4 to 6 weeks; may optionally add an aminoglycoside" +
+           "<br><br>Beta-hemolytic Streptococcus infection: Alternative therapy in patients with penicillin allergy, 15 mg/kg IV every 12 hours for 4 to 6 weeks" +
+           "<br><br>Propionibacterium acnes infection: Alternative therapy in patients with penicillin allergy, 15 mg/kg IV every 12 hours for 4 to 6 weeks",
+            renal_adjustment: "TBD",
+          },
+          "Staphylococcal enterocolitis": {
+            adult: "500 mg to 2 g orally daily divided in 3 to 4 doses for 7 to 10 days",
+            renal_adjustment: "TBD",
+          },
+          "Ventilator associated pneumonia, Empiric therapy": {
+            adult: "(Empiric therapy) 15 mg/kg IV every 8 to 12 hours for 7 days; for severe infections, consider a loading dose of 25 to 30 mg/kg IV",
+            renal_adjustment: "TBD",
+          }
+
+        }
+      },
+      {
+        type: 'Drug',
+        name: "Fluconazole",
+        brandName: "Diflucan®",
+        class: "Azole Antifungal",
+        details: {
+          indications: "Treats fungal infections",
+          moa: "Inhibits fungal ergosterol synthesis",
+          spectrum: "Covers Candida species",
+          sideEffects: "Hepatotoxicity, rash",
+          contraindications: "Allergy to azoles, pregnancy"
+        },
+        indications: [
+          "Asthma - Trichophytosis",
+          "Blastomycosis",
+          "Bone marrow transplant - Candidiasis; Prophylaxis",
+          "Candida endophthalmitis",
+          "Candidal balano-posthitis, Severe",
+          "Candidal endocarditis",
+          "Candidal vulvovaginitis",
+          "Candidal vulvovaginitis, Recurrent; Prophylaxis",
+          "Candidal vulvovaginitis, Recurrent; Prophylaxis - HIV infection",
+          "Candidal vulvovaginitis - HIV infection",
+          "Candidemia",
+          "Candidiasis",
+          "Candidiasis of the esophagus",
+          "Candidiasis of the esophagus, Recurrent; Prophylaxis",
+          "Candidiasis of the esophagus, Recurrent; Prophylaxis - HIV infection",
+          "Candidiasis of urogenital site",
+          "Central nervous system candidiasis",
+          "Coccidioidomycosis",
+          "Coccidioidomycosis; Prophylaxis - HIV infection",
+          "Coccidioidomycosis - HIV infection",
+          "Cryptococcal meningitis",
+          "Cryptococcal meningitis - HIV infection",
+          "Cutaneous leishmaniasis",
+          "Cutaneous sporotrichosis",
+          "Disseminated candidiasis, chronic",
+          "Empirical antifungal therapy, Suspected candidiasis",
+          "Fungal arthritis, Due to Candida species",
+          "HIV infection - Oropharyngeal candidiasis, Recurrent; Prophylaxis",
+          "HIV infection - Pulmonary cryptococcosis",
+          "Lymphocutaneous sporotrichosis",
+          "Onychomycosis due to dermatophyte",
+          "Oropharyngeal candidiasis",
+          "Oropharyngeal candidiasis; Prophylaxis",
+          "Peritoneal dialysis-associated peritonitis, Fungal",
+          "Pulmonary cryptococcosis",
+          "Tinea"
+        ],
+        dosing: {
+          uti: {
+            adult: "FLUCONAZOLE ONLY?",
+            renal_adjustment: "Reduce dose in renal impairment",
+          },
+          sepsis: {
+            adult: "FLUCONAZOLE ONLY?",
+            renal_adjustment: "Adjust dose based on creatinine clearance",
+          },
+          meningitis: {
+            adult: "FLUCONAZOLE ONLY?",
+            renal_adjustment: "TBD",
+          }
+        }
+      },
+      {
+        type: 'Drug',
+        name: "DRUGNAME",
+        brandName: "BRANDNAME®",
+        class: "CLASS",
+        details: {
+          indications: "WHAT ITS FOR",
+          moa: "WHAT IT DOOOOOO",
+          spectrum: "WHAT IT COVERS",
+          sideEffects: "THE KINDA BAD",
+          contraindications: "THE REALLY BAD"  
+        },
+        indications: [
+          "x",
+          "x2",
+          "x3",
+          "x4",
+          "x5",
+          "x6",
+          "x7",
+        ],
+        dosing: {
+          "x": {
+            adult: "big people dose",
+            renal_adjustment: "i need something please"
+          },
+          "x2": {
+            adult: "big people dose 2",
+            renal_adjustment: "", 
+          },
+          "x3": {
+            adult: "big people dose 3",
+            renal_adjustment: "",
+          },
+        }
+      },
+      {
+        type: 'Drug',
+        name: "Amoxicillin",
+        brandName: "Amoxil®",
+        class: "CLASS",
+        details: {
+          indications: "WHAT ITS FOR",
+          moa: "WHAT IT DOOOOOO",
+          spectrum: "WHAT IT COVERS",
+          sideEffects: "THE KINDA BAD",
+          contraindications: "THE REALLY BAD"  
+        },
+        indications: [
+          "x",
+          "x2",
+          "x3",
+          "x4",
+          "x5",
+          "x6",
+          "x7",
+        ],
+        dosing: {
+          "x": {
+            adult: "big people dose",
+            renal_adjustment: "i need something please"
+          },
+          "x2": {
+            adult: "big people dose 2",
+            renal_adjustment: "", 
+          },
+          "x3": {
+            adult: "big people dose 3",
+            renal_adjustment: "",
+          },
+        }
+      },
+    ];
+
+    const searchBar = document.getElementById('search-bar');
+    const autocompleteList = document.getElementById('autocomplete-list');
+    const infoChart = document.getElementById('info-chart');
+    const itemName = document.getElementById('item-name');
+    const itemClass = document.getElementById('item-class');
+    const itemDetails = document.getElementById('item-details');
+    const mainInfo = document.getElementById('main-info');
+    const dosingInfo = document.getElementById('dosing-info');
+    const toggleButton = document.getElementById('toggle-dosing');
+    const indicationSelect = document.getElementById('indication');
+
+    searchBar.addEventListener('input', () => {
+      const query = searchBar.value.toLowerCase();
+      autocompleteList.innerHTML = '';
+
+      if (query.length > 0) {
+        const matchedItems = data.filter(item => {
+  const normalizedName = item.name.toLowerCase();
+  const normalizedQuery = query.toLowerCase();
+  
+  // Check for full word match or starts-with match
+  return normalizedName.split(' ').some(word => 
+    word.startsWith(normalizedQuery) || normalizedName.startsWith(normalizedQuery)
+         );
+    });
+
+        matchedItems.forEach(item => {
+          const listItem = document.createElement('li');
+          listItem.textContent = `${item.type}: ${item.name}`;
+
+          listItem.addEventListener('click', () => {
+            displayItemInfo(item);
+          });
+
+          autocompleteList.appendChild(listItem);
+        });
+      }
+    });
+
+    const displayItemInfo = (item) => {
+      // Reset chart container
+      infoChart.classList.remove('active');
+      
+      // Clear autocomplete and reset search bar
+      autocompleteList.innerHTML = '';
+      searchBar.value = item.name;
+
+      // Delay to allow for reflow and restart of animation
+      setTimeout(() => {
+        // Reset display of main info and dosing info
+        mainInfo.classList.remove('hidden');
+        dosingInfo.classList.remove('active');
+
+        // Reset toggle button to "Dosing"
+        toggleButton.textContent = 'Dosing';
+
+        // Show or hide dosing button based on item type
+        toggleButton.style.display = item.type === 'Drug' ? 'block' : 'none';
+
+        // Update item name with brand name for drugs
+        itemName.innerHTML = item.type === 'Drug' 
+        ? `${item.name} (${item.brandName})` 
+        : `<em>${item.name}</em>`;
+
+        itemClass.textContent = `Class: ${item.class}`;
+        
+        // Display details based on item type
+        itemDetails.innerHTML = item.details
+          ? `<strong>Indications:</strong> ${item.details.indications}<br>
+             <strong>MOA:</strong> ${item.details.moa}<br>
+             <strong>Spectrum:</strong> ${item.details.spectrum}<br>
+             <strong>Side Effects:</strong> ${item.details.sideEffects}<br>
+             <strong>Contraindications:</strong> ${item.details.contraindications}`
+          : `<strong>Associated Infections:</strong> ${item.infections}<br>
+             <strong>Sensitivity:</strong> ${item.sensitivity}<br>
+             <strong>Resistant Activity:</strong> ${item.resistance}`
+
+        // Update indication dropdown for drugs
+        if (item.type === 'Drug') {
+          const indicationSelect = document.getElementById('indication');
+          indicationSelect.innerHTML = ''; // Clear existing options
+
+          // Add default option
+          const defaultOption = document.createElement('option');
+          defaultOption.value = '';
+          defaultOption.textContent = 'Select an indication';
+          indicationSelect.appendChild(defaultOption);
+
+          // Populate dropdown with drug-specific indications
+          item.indications.forEach((indication, index) => {
+            const option = document.createElement('option');
+            option.value = `indication-${index}`;
+            option.textContent = indication;
+            indicationSelect.appendChild(option);
+          });
+
+        // Add event listener for indication selection
+            indicationSelect.addEventListener('change', () => {
+            const dosingDetails = document.getElementById('dosing-details');
+            
+            if (indicationSelect.value === '') {
+                dosingDetails.innerHTML = '<p>Select an indication to view dosing information</p>';
+                return;
+            }
+
+            const selectedIndicationIndex = parseInt(indicationSelect.value.split('-')[1]);
+            const selectedIndication = item.indications[selectedIndicationIndex];
+
+            // Get dosing information directly using the full indication name as the key
+            const dosingInfo = item.dosing[selectedIndication];
+            
+            if (dosingInfo) {
+                const dosingDetailsHTML = `
+                <p><strong>Selected Indication:</strong> ${selectedIndication}</p>
+                <p><strong>Adult Dosing:</strong></p>
+                ${dosingInfo.adult.split('\n').map(line => `<p>${line}</p>`).join('')}
+                <p><strong>Renal Adjustment:</strong> ${dosingInfo.renal_adjustment || 'Not Applicable'}</p>
+                `;
+                
+                dosingDetails.innerHTML = dosingDetailsHTML;
+            } else {
+                dosingDetails.innerHTML = `<p>Dosing information not available for: ${selectedIndication}</p>`;
+            }
+            });
+
+          // Trigger initial change to populate first indication
+          indicationSelect.dispatchEvent(new Event('change'));
+        }
+
+        // Show chart container with animation
+        infoChart.style.display = 'block';
+        infoChart.classList.add('active');
+      }, 50);
+    };
+
+    toggleButton.addEventListener('click', () => {
+      if (dosingInfo.classList.contains('active')) {
+        // Switching back to main info
+        dosingInfo.classList.remove('active');
+        mainInfo.classList.remove('hidden');
+        toggleButton.textContent = 'Dosing';
+      } else {
+        // Switching to dosing info
+        dosingInfo.classList.add('active');
+        mainInfo.classList.add('hidden');
+        toggleButton.textContent = 'Back';
+      }
+    });
+  </script>
+</body>
+</html>
